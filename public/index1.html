@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>MEAN-Angular js Application</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Roboto:400,100,300,500">
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.0/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+        <!--<link rel="stylesheet" href="stylesheets/style.css">-->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/sweetalert/1.1.3/sweetalert.min.css">
+         <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular-route.js"></script>
+    <script src= "https://cdnjs.cloudflare.com/ajax/libs/angular-ui-router/0.4.2/angular-ui-router.min.js "></script>  
+    </head>
+    <body  ng-app='demoApp' >
+    <a ui-sref="root.home" href="#">home</a>
+    <a ui-sref="root.about" href="#">about</a>
+    <a ui-sref="root.restricted" href="#">restricted page</a>
+    
+    <div ui-view>
+    </div>
+    
+    <script type="text/ng-template" id="views/login.html">
+    	<h1>Login</h1>
+        <label>Username</label><input ng-model="userCred.username"/>
+        <label>Password</label><input type="password" ng-model="userCred.password"/>
+        <button ng-click="login(userCred)">login</button>
+    </script>
+    
+    <script type="text/ng-template" id="layout.html">
+    	<div>
+            <div ui-view="header"></div>
+            <div ui-view="content"></div>
+            <div ui-view="footer"></div>
+    	</div>
+    </script>
+</div>
+       
+<script>
+       var app = angular.module('demoApp', ['ui.router']);
+	app.run(function($rootScope, $state) {
+            $rootScope.$on('$stateChangeError', function(evt, to, toParams, from, fromParams, error) {
+          if (error.redirectTo) {
+            $state.go(error.redirectTo);
+          } else {
+            $state.go('error', {status: error.status})
+          }
+        })
+    });
+	app.factory('userService', function () {
+	var usersMock = {
+    	'testUser': {
+        	username: 'testUser',
+            password: '1234'
+        },
+        'testUser2': {
+        	username: 'testUser2',
+            password: '1234'
+        }
+    };
+	var userService = {
+    	user: undefined,
+    	login: function(userCredentials) {
+        	// later --> $http.post('auth', userCredentials).then(...)
+            // for demo use local data
+            var user = usersMock[userCredentials.username]
+            userService.user = ( user && ( user.password == userCredentials.password ) ) ? 
+            	user : undefined;
+            return user;
+        },
+        logout: function() {
+        	userService.user = undefined;
+        }
+    }
+    
+    return userService;
+});
+	app.config(function ($urlRouterProvider, $stateProvider) {
+
+	$urlRouterProvider.otherwise('/');
+    
+    $stateProvider
+    	.state('root', {
+        	url: '',
+        	abstract:true,
+            resolve: {
+            	'user': function(userService) {
+                	return userService.user; // would be async in a real app
+                }
+            },
+            views: {
+            	'': {
+                	templateUrl: 'layout.html',
+                },
+            	'header@root': {
+                	template: '<h1>header View<span ng-if="user"><button ng-click="logout()">logout</button></span><span ng-if="!user"><button ng-click="login()">login</button></span></h1>',
+                    controller: function($scope, $state, user, userService) {
+                    	$scope.user = user;
+                        $scope.login = function() {
+                        	$state.go('login');
+                        };
+                        $scope.logout = function() {
+                        	userService.logout();
+                            $state.go('root.home', {}, {reload: true});
+                        };
+                    }
+            	},
+                'footer@root': {
+                    template: '<p>footer view</p>'
+                }
+            }
+        })
+    	.state('root.home', {
+            url: '/',
+            views: {
+                'content': {
+                    template: 'Hello at home'
+                }
+            }
+        })
+        .state('root.about', {
+            url: '/about',
+            views: {
+                'content': {
+                    template: 'about view'
+                }
+            }
+    	})
+        .state('root.restricted', {
+            url: '/restricted',
+            resolve: {
+            	auth: function(userService, $q, $timeout) {
+                
+                	var deferred = $q.defer();
+                	/* //with an async
+                    return UserService.load().then(function(user){
+                      if (permissionService.can(user, {goTo: state})) {
+                        return deferred.resolve({});
+                      } else {
+                        return deferred.reject({redirectTo: 'some_other_state'});
+                      }
+                    }*/
+                    
+                   $timeout(function() {
+                        if ( angular.isUndefined(userService.user) ) {
+                            return deferred.reject({redirectTo: 'login'});
+                        }
+                        else {
+                            return deferred.resolve(userService.user);
+                        }
+                    });
+                    
+                    return deferred.promise;
+                }
+            },
+            views: {
+                'content': {
+                    template: 'this is only visible after login. Hello {{user}}!',
+                    controller: function($scope, auth) {
+                    	$scope.user = auth.username;
+                    }
+                }
+            }
+    	})
+        .state('login', {
+            url: '/login',
+            templateUrl: 'views/login.html',
+            controller: function($scope, $state, userService) {
+            	$scope.login = function(cred) {
+                	var user = userService.login(cred);
+                    
+                    if (angular.isUndefined(user)) {
+                    	alert('username or password incorrect.')
+                    }
+                    else {
+                    	$state.go('root.restricted');
+                    }
+                };
+            }
+        });
+});
+
+
+
+  </script>      
+     </body>   
+</html>

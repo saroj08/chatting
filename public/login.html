@@ -1,0 +1,28 @@
+<form role="form" method="post" class="form-signin" name="login" novalidate>
+    <div class="form-group" ng-if='initial' ng-class="{ 'has-error' : login.username.$invalid && login.username.$touched }">
+        <label class="sr-only" for="form-username">username</label>
+        <input type="text" name="username" placeholder="username..." class="form-control" ng-model="user.username" required>
+        <p ng-show="login.username.$invalid && login.username.$touched" class="help-block">username is required.
+
+        </p>
+
+    </div>
+    <div class="form-group" ng-class="{ 'has-error' : login.email.$invalid && login.email.$touched || login.email.$error.email}">
+        <label class="sr-only" for="form-email">Email</label>
+        <input type="email" name="email" placeholder="Email..." class="form-control" ng-model="user.email" required>
+        <p ng-show="login.email.$invalid && login.email.$touched" class="help-block">email is required.
+            <span ng-show="login.email.$error.email" class="help-block">Not an email</span>
+        </p>
+
+    </div>
+
+
+    <div class="form-group" ng-class="{ 'has-error' : login.pwd.$invalid && login.pwd.$touched }">
+        <label class="sr-only" for="form-Password">Password</label>
+        <input type="password" name="pwd" placeholder="Password..." class="form-control" ng-model="user.pwd" required>
+        <p ng-show="login.pwd.$invalid && login.pwd.$touched" class="help-block">password is required.</p>
+    </div>
+    <div class="btn-group">
+        <button type="submit" ng-if='!initial' class="btn" ng-disabled="login.$invalid" ng-click="loginuser(user)">Sign In!</button>
+        <button type="submit" class="btn" ng-click='newuser(user)'>Register</button></div>
+</form>
